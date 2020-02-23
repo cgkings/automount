@@ -59,12 +59,12 @@ statements = {
             "zh": "挂載失敗。"
         },
         "differentMountPoint": {
-            "en": "The partition is mounted but with different mount point.",
-            "zh": "分區已掛載，但掛載點不同。"
+            "en": "The partition is mounted on different mount point.",
+            "zh": "分區已掛載到不同的掛載點。"
         },
         "fstabFoundError": {
-            "en": "Partition found in fstab file but with different info.",
-            "zh": "在fstab文件中找到了分區，但是具有不同的信息。"
+            "en": "Partition with different info is found in fstab file.",
+            "zh": "在fstab文件中找到了具有不同信息的分區。"
         },
         "createPartitionFailed": {
             "en": "Failed to create a new partition.",
@@ -103,8 +103,8 @@ statements = {
 
 # global variable
 defaultLang = "en"
-lang = False
-mountPoint = False
+lang = None
+mountPoint = None
 fdiskInput = """n
 p
 {0}
@@ -126,7 +126,8 @@ def cls():
 
 def getOutput(command, input=None):
     #print(command)
-    p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+    p = subprocess.Popen(command, stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, close_fds=True)
     stdout = p.communicate(input=input)[0].decode()
     return stdout
 
@@ -155,7 +156,7 @@ def getLogicalVolume(vg):
 
 def printDisk(disks):
     for k, v in disks.iteritems():
-        if v["sectors"] == False:
+        if v["sectors"] == None:
             continue
         point = []
         for kk, vv in v.iteritems():
@@ -188,8 +189,8 @@ def printDisk(disks):
 def getMountInfo(partition):
     output = getOutput("mount")
     mountInfo = {
-        "type": False,
-        "path": False
+        "type": None,
+        "path": None
     }
     for o in output.splitlines():
         w = o.split()
@@ -236,18 +237,19 @@ def mountPartition(partition, mountPoint):
     mountInfo = getMountInfo(partition)
 
     # mounted but with different path
-    if mountInfo["type"] != False and mountInfo["path"] != mountPoint:
+    if mountInfo["type"] != None and mountInfo["path"] != mountPoint:
         ERR(statements["error"]["differentMountPoint"][lang])
         exit(-1)
 
     # it is not mounted
-    if mountInfo["type"] == False:
+    if mountInfo["type"] == None:
         # try to mount partition
         ret = subprocess.call("mount {0} {1}".format(
             partition, mountPoint).split())
         if ret == 0:
             mountInfo = getMountInfo(partition)
-            if mountInfo["type"] != False and mountInfo["path"] != mountPoint:
+            if (mountInfo["type"] != None and
+                    mountInfo["path"] != mountPoint):
                 ERR(statements["error"]["differentMountPoint"][lang])
                 exit(-1)
         else:
@@ -259,7 +261,8 @@ def mountPartition(partition, mountPoint):
     writeFstab(partition, mountPoint, mountInfo["type"])
 
 def makeFileSystem(partition, fileSystemType):
-    output = getOutput("mkfs -t {0} {1}".format(fileSystemType, partition).split())
+    output = getOutput("mkfs -t {0} {1}".format(fileSystemType,
+        partition).split())
     print(output)
 
 def createPartition(dname, index, partId):
@@ -275,30 +278,39 @@ def createPartition(dname, index, partId):
     ERR(statements["error"]["createPartitionFailed"][lang])
     exit(-1)
 
-def autoMountEXT(vg, disks):
-    global lang
-    global mountPoint
+def getDataDisk(disks):
+    dname = None
+    if "/dev/sdb" in disks:
+        dname = "/dev/sdb"
+    elif "/dev/xvdb" in disks:
+        dname = "/dev/xvdb"
+    return dname
 
-    while mountPoint == False:
+def chooseMountPoint():
+    mountPoint = None
+    while mountPoint == None:
         mountPoint = raw_input(statements["chooseMountPoint"][lang])
         if not mountPoint.startswith("/"):
             ERR(statements["error"]["invalidMountPoint"][lang].format(
                 mountPoint))
-            mountPoint = False
+            mountPoint = None
+    return mountPoint
+
+def autoMountEXT(vg, disks):
+    global lang
+    global mountPoint
+
+    mountPoint = chooseMountPoint()
 
     if len(disks) > 1:
         # get name of data disk
-        dname = False
-        if "/dev/sdb" in disks:
-            dname = "/dev/sdb"
-        elif "/dev/xvdb" in disks:
-            dname = "/dev/xvdb"
+        dname = getDataDisk(disks)
 
         #print("dname:", dname)
         #print("mountPoint:", mountPoint)
 
         # data disk exists
-        if dname != False:
+        if dname != None:
             if len(disks[dname]["partition"]) == 0:
                 # format and mount
                 #mountPartition(partition[0], mountPoint)
@@ -328,8 +340,8 @@ def autoMount(vg, disks):
         print(i)
     print()
 
-    choice = False
-    while choice == False:
+    choice = None
+    while choice == None:
         choice = raw_input(statements["askForChoice"][lang])
         if choice == "1":
             autoMountLVM(vg, disks)
@@ -338,18 +350,18 @@ def autoMount(vg, disks):
         elif choice == "q":
             exit()
         else:
-            choice = False
+            choice = None
 
 def getDiskStructure():
     disks = {}
     output = getOutput("fdisk -l".split())
-    curr = False
+    curr = None
     for o in output.splitlines():
         if o.startswith("Disk "):
             w = o.split()
             if len(w) > 2 and w[1].startswith("/"):
                 if "mapper" in w[1]:
-                    curr = False
+                    curr = None
                     continue
                 curr = w[1].rstrip(":")
                 disks[curr] = {}
@@ -358,20 +370,20 @@ def getDiskStructure():
                 if w[-1] == "sectors" or w[-1] == "cylinders":
                     disks[curr]["sectors"] = int(w[-2])
                 else:
-                    disks[curr]["sectors"] = False
-        elif (curr != False and disks[curr]["sectors"] == False
+                    disks[curr]["sectors"] = None
+        elif (curr != None and disks[curr]["sectors"] == None
                 and o.endswith("cylinders")):
             i = o.rindex("cylinders")
             o = o[:i]
             w = o.split()
             disks[curr]["sectors"] = int(w[-1])
-        elif (curr != False and disks[curr]["sectors"] == False
+        elif (curr != None and disks[curr]["sectors"] == None
                 and o.endswith("sectors")):
             i = o.rindex("sectors")
             o = o[:i]
             w = o.split()
             disks[curr]["sectors"] = int(w[-1])
-        elif curr != False and o.startswith(curr):
+        elif curr != None and o.startswith(curr):
             w = o.split()
             if len(w) >= 6:
                 p = w[0]
@@ -383,7 +395,8 @@ def getDiskStructure():
                     "end": int(w[2])
                 }
 
-                if disks[curr]["partition"][p]["end"] >= disks[curr]["sectors"]:
+                if (disks[curr]["partition"][p]["end"] >=
+                        disks[curr]["sectors"]):
                     disks[curr]["end"] = True
     return disks
 
@@ -411,14 +424,14 @@ def chooseLanguage():
         print(i)
     print()
 
-    while lang == False:
+    while lang == None:
         lang = raw_input("Enter your choice: ")
         if lang == "1":
             lang = "en"
         elif lang == "2":
             lang = "zh"
         else:
-            lang = False
+            lang = None
     return lang
 
 if __name__ == "__main__":
