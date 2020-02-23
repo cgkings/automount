@@ -2,7 +2,6 @@
 # -*- coding: utf8 -*-
 
 from __future__ import print_function
-import glob
 import subprocess
 from pprint import pprint
 from os import system, path, makedirs
@@ -54,6 +53,30 @@ statements = {
             "en": "{0} is not a valid mount point.",
             "zh": "{0} 不是有效的挂載點。"
         },
+        "invalidDisk": {
+            "en": "{0} is not a valid disk.",
+            "zh": "{0} 不是有效的硬碟。"
+        },
+        "invalidLV": {
+            "en": "{0} is not a valid logical volume.",
+            "zh": "{0} 不是有效的邏輯卷。"
+        },
+        "invalidVG": {
+            "en": "{0} is not a valid volume group.",
+            "zh": "{0} 不是有效的卷組。"
+        },
+        "noValidLV": {
+            "en": "No valid logical volume was found.",
+            "zh": "找不到有效的邏輯卷。"
+        },
+        "outOfIndex": {
+            "en": "Out of index.",
+            "zh": "超出索引。"
+        },
+        "outOfSpace": {
+            "en": "Out of space.",
+            "zh": "空間不足。"
+        },
         "errorMount": {
             "en": "Mount failed.",
             "zh": "挂載失敗。"
@@ -69,7 +92,7 @@ statements = {
         "createPartitionFailed": {
             "en": "Failed to create a new partition.",
             "zh": "無法創建新分區。"
-        }
+        },
     },
     "mainPage": {
         "en": [
@@ -95,6 +118,18 @@ statements = {
         "en": "Enter your preferred mount point (/home, /www): ",
         "zh": "輸入您首選的掛載點 (/home, /www): "
     },
+    "chooseDisk": {
+        "en": "Enter your preferred disk ({0}): ",
+        "zh": "輸入您首選的硬碟 ({0}): "
+    },
+    "chooseLV": {
+        "en": "Enter your preferred logical volume ({0}): ",
+        "zh": "輸入您首選的邏輯卷 ({0}): "
+    },
+    "chooseVG": {
+        "en": "Enter your preferred volume group ({0}): ",
+        "zh": "輸入您首選的卷組 ({0}): "
+    },
     "mountedOK": {
         "en": "The partition is mounted successfully.",
         "zh": "分區已成功掛載。"
@@ -105,6 +140,7 @@ statements = {
 defaultLang = "en"
 lang = None
 mountPoint = None
+fstabPath = "/etc/fstab"
 fdiskInput = """n
 p
 {0}
@@ -141,17 +177,6 @@ def getPhysicalVolume(vg):
             if len(w) > 2:
                 if w[1] in vg:
                     vg[w[1]]["pv"].append(w[0])
-        cnt+=1
-
-def getLogicalVolume(vg):
-    output = getOutput("lvs")
-    cnt = 0
-    for o in output.splitlines():
-        if cnt != 0:
-            w = o.split()
-            if len(w) > 2:
-                if w[1] in vg:
-                    vg[w[1]]["lv"].append(w[0])
         cnt+=1
 
 def printDisk(disks):
@@ -203,7 +228,7 @@ def getMountInfo(partition):
     return mountInfo
 
 def writeFstab(partition, mountPoint, partitionType):
-    fstabPath = "/etc/fstab"
+    global fstabPath
     found = False
     with open(fstabPath) as f:
         for line in f:
@@ -266,7 +291,7 @@ def makeFileSystem(partition, fileSystemType):
     print(output)
 
 def createPartition(dname, index, partId):
-    output = getOutput("fdisk {0}".format(dname).split(),
+    output = getOutput("fdisk -u {0}".format(dname).split(),
         input=fdiskInput.format(index, partId))
     print(output)
     disks = getDiskStructure()
@@ -305,6 +330,8 @@ def autoMountEXT(vg, disks):
     if len(disks) > 1:
         # get name of data disk
         dname = getDataDisk(disks)
+        if dname == None:
+            dname = chooseDisk(disks.keys())
 
         #print("dname:", dname)
         #print("mountPoint:", mountPoint)
@@ -313,8 +340,8 @@ def autoMountEXT(vg, disks):
         if dname != None:
             if len(disks[dname]["partition"]) == 0:
                 # format and mount
-                #mountPartition(partition[0], mountPoint)
                 partition = createPartition(dname, 1, partitionId["Native"])
+                #print("partition:", partition)
                 makeFileSystem(partition, "ext4")
                 mountPartition(partition, mountPoint)
                 OK(statements["mountedOK"][lang])
@@ -325,13 +352,117 @@ def autoMountEXT(vg, disks):
                 mountPartition(partition[0], mountPoint)
                 OK(statements["mountedOK"][lang])
             else:
-                ERR(statements["error"]["invalidNumOfPartition"][lang])
+                ERR(statements["error"]["notImplemented"][lang])
                 exit(-1)
+        else:
+            ERR(statements["error"]["noDataDisk"][lang])
+            exit(-1)
+
+def chooseDisk(disks):
+    selectedDisk = None
+    while selectedDisk == None:
+        selectedDisk = raw_input(statements["chooseDisk"][lang].format(
+            ','.join(disks)))
+        if selectedDisk not in disks:
+            ERR(statements["error"]["invalidDisk"][lang].format(
+                selectedDisk))
+            selectedDisk = None
+    return selectedDisk
+
+def chooseLV(lv):
+    selectedLV = None
+    while selectedLV == None:
+        selectedLV = raw_input(statements["chooseLV"][lang].format(
+            ','.join(lv)))
+        if selectedLV not in lv:
+            ERR(statements["error"]["invalidLV"][lang].format(selectedLV))
+            selectedLV = None
+    return selectedLV
+
+def chooseVG(vg):
+    selectedVG = None
+    while selectedVG == None:
+        selectedVG = raw_input(statements["chooseVG"][lang].format(
+            ','.join(vg)))
+        if selectedVG not in vg:
+            ERR(statements["error"]["invalidVG"][lang].format(selectedVG))
+            selectedVG = None
+    return selectedVG
+
+def extendLV(vg, lv, partition):
+    mapperPath = "/dev/mapper/{0}-{1}".format(vg, lv)
+    mountInfo = getMountInfo(mapperPath)
+    if mountInfo["type"] == None:
+        ERR(statements["error"]["unexpectedError"][lang])
+        exit(-1)
+
+    # create physical volume
+    output = getOutput("pvcreate {0}".format(partition).split())
+    print(output)
+
+    # extend volume group
+    output = getOutput("vgextend {0} {1}".format(vg, partition).split())
+    print(output)
+
+    # resize logical volume
+    output = getOutput("lvresize -l +100%FREE {0}".format(
+        mapperPath).split())
+    print(output)
+
+    # resize file system
+    if mountInfo["type"] == "xfs":
+        output = getOutput("xfs_growfs {0}".format(
+            mountInfo["path"]).split())
+        print(output)
+    else:
+        output = getOutput("resize2fs {0}".format(mapperPath).split())
+        print(output)
 
 def autoMountLVM(vg, disks):
     global lang
-    ERR(statements["error"]["notImplemented"][lang])
-    pass
+
+    if len(vg) > 0 and len(disks) > 1:
+        # get name of data disk
+        dname = getDataDisk(disks)
+        if dname == None:
+            dname = chooseDisk(disks.keys())
+
+        print("dname:", dname)
+        if len(vg) == 1:
+            selectedVG = vg.keys()[0]
+        else:
+            selectedVG = chooseVG(vg.keys())
+
+        filteredLV = [ x for x in vg[selectedVG]["lv"] if "swap" not in x ]
+        if len(filteredLV) == 0:
+            ERR(statements["error"]["noValidLV"])
+        elif len(filteredLV) == 1:
+            selectedLV = filteredLV[0]
+        else:
+            selectedLV = chooseLV(filteredLV)
+
+        print("selectedVG:", selectedVG)
+        print("selectedLV:", selectedLV)
+
+        # data disk exists
+        if dname != None:
+            if disks[dname]["end"] == True:
+                ERR(statements["error"]["outOfSpace"][lang])
+                exit(-1)
+
+            idx = len(disks[dname]["partition"]) + 1
+            if idx <= 4:
+                # format and mount
+                partition = createPartition(dname, idx, partitionId["LVM"])
+                extendLV(selectedVG, selectedLV, partition)
+                OK(statements["mountedOK"][lang])
+                pass
+            else:
+                ERR(statements["error"]["outOfIndex"][lang])
+                exit(-1)
+        else:
+            ERR(statements["error"]["noDataDisk"][lang])
+            exit(-1)
 
 def autoMount(vg, disks):
     cls()
@@ -354,7 +485,7 @@ def autoMount(vg, disks):
 
 def getDiskStructure():
     disks = {}
-    output = getOutput("fdisk -l".split())
+    output = getOutput("fdisk -l -u".split())
     curr = None
     for o in output.splitlines():
         if o.startswith("Disk "):
@@ -364,19 +495,13 @@ def getDiskStructure():
                     curr = None
                     continue
                 curr = w[1].rstrip(":")
-                disks[curr] = {}
-                disks[curr]["partition"] = {}
-                disks[curr]["end"] = False
-                if w[-1] == "sectors" or w[-1] == "cylinders":
+                disks[curr] = {
+                    "partition": {},
+                    "end": False,
+                    "sectors": None
+                }
+                if w[-1] == "sectors":
                     disks[curr]["sectors"] = int(w[-2])
-                else:
-                    disks[curr]["sectors"] = None
-        elif (curr != None and disks[curr]["sectors"] == None
-                and o.endswith("cylinders")):
-            i = o.rindex("cylinders")
-            o = o[:i]
-            w = o.split()
-            disks[curr]["sectors"] = int(w[-1])
         elif (curr != None and disks[curr]["sectors"] == None
                 and o.endswith("sectors")):
             i = o.rindex("sectors")
@@ -395,10 +520,21 @@ def getDiskStructure():
                     "end": int(w[2])
                 }
 
-                if (disks[curr]["partition"][p]["end"] >=
+                if (disks[curr]["partition"][p]["end"] + 1 >=
                         disks[curr]["sectors"]):
                     disks[curr]["end"] = True
     return disks
+
+def obtainLogicalVolume(vg):
+    output = getOutput("lvs")
+    cnt = 0
+    for o in output.splitlines():
+        if cnt != 0:
+            w = o.split()
+            if len(w) > 2:
+                if w[1] in vg:
+                    vg[w[1]]["lv"].append(w[0])
+        cnt+=1
 
 def getVolGroup():
     output = getOutput("vgs")
@@ -408,9 +544,10 @@ def getVolGroup():
         if cnt != 0:
             w = o.split()
             if len(w) > 1:
-                vg[w[0]] = {}
-                vg[w[0]]["pv"] = []
-                vg[w[0]]["lv"] = []
+                vg[w[0]] = {
+                    "pv": [],
+                    "lv": []
+                }
         cnt+=1
     return vg
 
@@ -441,13 +578,14 @@ if __name__ == "__main__":
     try:
         # precheck
         vg = getVolGroup()
+        obtainLogicalVolume(vg)
         disks = getDiskStructure()
         if len(disks) < 2:
             ERR(statements["error"]["noDataDisk"][lang])
             exit(-1)
-        if len(vg) > 1:
-            ERR(statements["error"]["multipleVolumeGroup"][lang])
-            exit(-1)
+        #if len(vg) > 1:
+        #    ERR(statements["error"]["multipleVolumeGroup"][lang])
+        #    exit(-1)
         #pprint(disks)
         #raw_input("test")
 
