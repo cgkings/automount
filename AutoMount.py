@@ -394,7 +394,9 @@ def chooseVG(vg):
     return selectedVG
 
 def extendLV(vg, lv, partition):
-    mapperPath = "/dev/mapper/{0}-{1}".format(vg, lv)
+    mapperVG = vg.replace("-", "--")
+    mapperLV = lv.replace("-", "--")
+    mapperPath = "/dev/mapper/{0}-{1}".format(mapperVG, mapperLV)
     mountInfo = getMountInfo(mapperPath)
     if mountInfo["type"] == None:
         ERR(statements["error"]["unexpectedError"][lang])
