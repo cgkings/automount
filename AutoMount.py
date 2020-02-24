@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 # -*- coding: utf8 -*-
 
 from __future__ import print_function
@@ -491,6 +491,12 @@ def getDiskStructure():
     disks = {}
     output = getOutput("fdisk -l -u".split())
     curr = None
+    idx = {
+        "Boot": None,
+        "Start": None,
+        "End": None,
+        "Id": None
+    }
     for o in output.splitlines():
         if o.startswith("Disk "):
             w = o.split()
@@ -512,16 +518,24 @@ def getDiskStructure():
             o = o[:i]
             w = o.split()
             disks[curr]["sectors"] = int(w[-1])
+        elif curr != None and o.startswith("Device"):
+            if ("Device" in o and "Boot" in o and "Start" in o
+                    and "End" in o and "Id" in o):
+                w = o.split()
+                idx["Boot"] = w.index("Boot")
+                idx["Start"] = w.index("Start")
+                idx["End"] = w.index("End")
+                idx["Id"] = w.index("Id")
         elif curr != None and o.startswith(curr):
             w = o.split()
             if len(w) >= 6:
                 p = w[0]
-                if w[1] == "*":
-                    w.pop(1)
+                if w[idx["Boot"]] == "*":
+                    w.pop(idx["Boot"])
                 disks[curr]["partition"][p] = {
-                    "partId": w[4],
-                    "begin": int(w[1]),
-                    "end": int(w[2])
+                    "partId": w[idx["Id"]-1],
+                    "begin": int(w[idx["Start"]-1]),
+                    "end": int(w[idx["End"]-1])
                 }
 
                 if (disks[curr]["partition"][p]["end"] + 1 >=
