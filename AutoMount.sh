@@ -22,6 +22,9 @@ function run_script {
     wget -O AutoMount.py ${URL}
     chmod 755 AutoMount.py
     ./AutoMount.py
+    if [ "$?" == "0" ]; then
+        exit -1
+    fi
 }
 
 function root_check {
