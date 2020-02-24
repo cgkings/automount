@@ -521,23 +521,38 @@ def getDiskStructure():
             w = o.split()
             disks[curr]["sectors"] = int(w[-1])
         elif curr != None and o.strip().startswith("Device"):
-            if ("Device" in o and "Boot" in o and "Start" in o
-                    and "End" in o and "Id" in o):
+            if "Device" in o and "Start" in o and "End" in o:
                 w = o.split()
-                idx["Boot"] = w.index("Boot")
+                if "Boot" in o:
+                    idx["Boot"] = w.index("Boot")
+                else:
+                    idx["Boot"] = None
                 idx["Start"] = w.index("Start")
                 idx["End"] = w.index("End")
-                idx["Id"] = w.index("Id")
+                if "Id" in o:
+                    idx["Id"] = w.index("Id")
+                else:
+                    idx["Id"] = None
         elif curr != None and o.startswith(curr):
             w = o.split()
             if len(w) >= 6:
                 p = w[0]
-                if w[idx["Boot"]] == "*":
-                    w.pop(idx["Boot"])
+
+                # gpt disk don't have boot flag and partId
+                cnt = 0
+                if idx["Boot"] != None:
+                    cnt = 1
+                    if w[idx["Boot"]] == "*":
+                        w.pop(idx["Boot"])
+                if idx["Id"] == None:
+                    partId = None
+                else:
+                    partId = w[idx["Id"]-1]
+
                 disks[curr]["partition"][p] = {
-                    "partId": w[idx["Id"]-1],
-                    "begin": int(w[idx["Start"]-1]),
-                    "end": int(w[idx["End"]-1])
+                    "partId": partId,
+                    "begin": int(w[idx["Start"]-cnt]),
+                    "end": int(w[idx["End"]-cnt])
                 }
 
                 if (disks[curr]["partition"][p]["end"] + 1 >=
