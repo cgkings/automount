@@ -133,6 +133,10 @@ statements = {
     "mountedOK": {
         "en": "The partition is mounted successfully.",
         "zh": "分區已成功掛載。"
+    },
+    "extendedOK": {
+        "en": "The logical volume is extended successfully.",
+        "zh": "邏輯卷已成功擴展。"
     }
 }
 
@@ -455,7 +459,7 @@ def autoMountLVM(vg, disks):
                 # format and mount
                 partition = createPartition(dname, idx, partitionId["LVM"])
                 extendLV(selectedVG, selectedLV, partition)
-                OK(statements["mountedOK"][lang])
+                OK(statements["extendedOK"][lang])
                 pass
             else:
                 ERR(statements["error"]["outOfIndex"][lang])
