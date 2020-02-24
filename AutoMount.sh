@@ -10,10 +10,10 @@ function cleanup {
 
 function install_py2 {
     if [ -f "/etc/redhat-release" ]; then
-        yum install python2
+        yum install python2 -y
     else
         apt update
-        apt install python
+        apt install python -y
     fi
 }
 
