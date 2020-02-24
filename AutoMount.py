@@ -433,7 +433,7 @@ def autoMountLVM(vg, disks):
         if dname == None:
             dname = chooseDisk(disks.keys())
 
-        print("dname:", dname)
+        #print("dname:", dname)
         if len(vg) == 1:
             selectedVG = vg.keys()[0]
         else:
@@ -447,8 +447,8 @@ def autoMountLVM(vg, disks):
         else:
             selectedLV = chooseLV(filteredLV)
 
-        print("selectedVG:", selectedVG)
-        print("selectedLV:", selectedLV)
+        #print("selectedVG:", selectedVG)
+        #print("selectedLV:", selectedLV)
 
         # data disk exists
         if dname != None:
