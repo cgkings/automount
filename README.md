@@ -9,9 +9,9 @@ needs and what they may encounter.
 ## How to use
 
 ```
-wget -O AutoMount.py https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.py
-chmod 755 AutoMount.py
-./AutoMount.py
+wget -O AutoMount.sh https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.sh
+chmod 755 AutoMount.sh
+./AutoMount.sh
 ```
 
 ## License
