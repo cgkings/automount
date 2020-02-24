@@ -9,7 +9,7 @@ needs and what they may encounter.
 ## How to use
 
 ```
-wget -o AutoMount.py https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.py
+wget -O AutoMount.py https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.py
 chmod 755 AutoMount.py
 ./AutoMount.py
 ```
