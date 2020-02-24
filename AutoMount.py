@@ -518,7 +518,7 @@ def getDiskStructure():
             o = o[:i]
             w = o.split()
             disks[curr]["sectors"] = int(w[-1])
-        elif curr != None and o.startswith("Device"):
+        elif curr != None and o.strip().startswith("Device"):
             if ("Device" in o and "Boot" in o and "Start" in o
                     and "End" in o and "Id" in o):
                 w = o.split()
