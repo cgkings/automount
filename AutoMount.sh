@@ -5,6 +5,7 @@ URL="https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.py"
 
 function cleanup {
     rm -rf /root/AutoTools.sh
+    rm -rf /root/AutoToolsWget.sh
     rm -rf /root/AutoMount.*
     rm -rf /etc/motd
 }
