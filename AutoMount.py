@@ -316,10 +316,11 @@ def getDataDisk(disks):
     return dname
 
 def chooseMountPoint():
+    protected = [ "/", "/boot", "/boot/" ]
     mountPoint = None
     while mountPoint == None:
         mountPoint = raw_input(statements["chooseMountPoint"][lang])
-        if not mountPoint.startswith("/"):
+        if not mountPoint.startswith("/") or mountPoint in protected:
             ERR(statements["error"]["invalidMountPoint"][lang].format(
                 mountPoint))
             mountPoint = None
