@@ -1,4 +1,5 @@
 #!/bin/bash
+export LC_ALL=en_US
 
 URL="https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.py"
 
