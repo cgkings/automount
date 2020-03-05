@@ -100,7 +100,7 @@ statements = {
             "=================================================",
             "Dangerous operation, only for new VPS",
             "Press q to cancel",
-            "1. Use the data disk to extend root partition",
+            "1. Use the data disk to extend root partition(/), use LVM",
             "2. Mount the data disk as another partition",
             "================================================="
         ],
@@ -109,7 +109,7 @@ statements = {
             "=================================================",
             "危險操作，僅適用於新的VPS",
             "按 q 取消",
-            "1. 使用數據硬碟擴展根分區",
+            "1. 使用數據硬碟擴展根分區(/)，使用 LVM 方式挂载，重装系统将丢失所有数据",
             "2. 將數據硬碟挂載為另一個分區",
             "================================================="
         ]
