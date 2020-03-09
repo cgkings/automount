@@ -1,5 +1,5 @@
 # automount
-AutoMount for XenSystem
+AutoMount for XenSystem/NoKVM
 
 To provide  more features, I rewrite AutoMount originally written 
 in bash script using python 2. This script is mainly provided for some 
