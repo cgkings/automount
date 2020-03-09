@@ -1,7 +1,7 @@
 #!/bin/bash
 export LC_ALL=en_US
 
-URL="https://raw.githubusercontent.com/gidcs/automount/master/AutoMount.py"
+URL="https://raw.githubusercontent.com/myluoluo/automount/master/AutoMount.py"
 
 function cleanup {
     rm -rf /root/AutoTools.sh
