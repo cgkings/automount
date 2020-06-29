@@ -9,7 +9,7 @@ needs and what they may encounter.
 ## How to use
 
 ```
-wget -O AutoMount.sh https://raw.githubusercontent.com/myluoluo/automount/master/AutoMount.sh
+wget -O AutoMount.sh https://raw.githubusercontent.com/cgkings/automount/master/AutoMount.sh
 chmod 755 AutoMount.sh
 ./AutoMount.sh
 ```
