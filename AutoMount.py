@@ -313,8 +313,8 @@ def getDataDisk(disks):
         dname = "/dev/sdb"
     elif "/dev/xvdb" in disks:
         dname = "/dev/xvdb"
-    elif "/dev/vdb" in disks:
-        dname = "/dev/vdb"
+    elif "/dev/sda1" in disks:
+        dname = "/dev/sda1"
     return dname
 
 def chooseMountPoint():
